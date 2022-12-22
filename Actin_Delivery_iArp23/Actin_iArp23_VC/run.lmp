@@ -35,9 +35,12 @@ timestep      10.0
 
 group arp23 id 1:1895
 group actin id 1896:2270
-group wh id 2271:2281
-group rigid1 union arp23 actin wh
-group rigid2 id 2305:2321
+group dl id 1935:1946
+group wh id 2271:2282
+group ch id 2305:2321
+group rigid1 union arp23 ch
+group rigidactin subtract actin dl
+group rigid2 union rigidactin wh
 group nonrigid subtract all rigid1 rigid2 
 #include fixes.txt
 
@@ -55,19 +58,15 @@ fix fxstandard nonrigid nve
 group arp3 id 1:404
 group arp2 id 405:778
 group arpC1 id 779:1132
-group a id 2339:2342
 
-compute egroup1 a group/group arp2
-compute egroup2 a group/group arpC1
-compute egroup3 a group/group arp3
-compute egroup4 a group/group arp23
-compute egroup5 rigid2 group/group arp2
-compute egroup6 rigid2 group/group arpC1 
-compute egroup7 rigid2 group/group arp3
-compute egroup8 rigid2 group/group arp23 
+compute egroup1 actin group/group arp2
+compute egroup2 actin group/group arp3
+compute egroup3 actin group/group arp23
+compute egroup4 dl group/group ch
+compute egroup5 dl group/group actin
 
 thermo        1000
-thermo_style  custom step pe ke temp press c_egroup1 c_egroup2 c_egroup3 c_egroup4 c_egroup5 c_egroup6 c_egroup7 c_egroup8
+thermo_style  custom step pe ke temp press c_egroup1 c_egroup2 c_egroup3 c_egroup4 c_egroup5
 thermo_modify flush yes
 dump          VMD1 all xtc 1000 xtc/out_$t.xtc
 restart       100000 restart.$t.tmp1 restart.$t.tmp2
