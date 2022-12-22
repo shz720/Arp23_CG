@@ -18,10 +18,11 @@ read_data input.data
 
 #fix walls all wall/harmonic xlo EDGE 80.0 5.0 20.0 xhi EDGE 80.0 5.0 20.0 ylo EDGE 80.0 5.0 20.0 yhi EDGE 80.0 5.0 20.0 zlo EDGE 80.0 5.0 20.0 zhi EDGE 80.0 5.0 20.0 
 
+
 bond_coeff  1 189 3.81
 
 pair_coeff * * lj/cut 1 0.0 0.0 0.0
-include KH_A_Coeffs.txt
+include KH_A_Coeffs_Scale.txt
 
 special_bonds fene
 
@@ -33,14 +34,12 @@ timestep      10.0
 #variable hpush atom "(z/abs(z))*0.6*20/z^13"
 #variable spush atom "1/(1+exp(z))"
 
-group arp23 id 1:1895
+#group dummy id 589:592
+#group real subtract all dummy
+group rigid1 id 1:1895
 group actin id 1896:2270
 group dl id 1935:1946
-group wh id 2271:2282
-group ch id 2305:2321
-group rigid1 union arp23 ch
-group rigidactin subtract actin dl
-group rigid2 union rigidactin wh
+group rigid2 subtract actin dl
 group nonrigid subtract all rigid1 rigid2 
 #include fixes.txt
 
@@ -52,21 +51,22 @@ fix fxrigid2 rigid2 rigid/nve molecule
 neigh_modify exclude molecule/intra rigid1
 neigh_modify exclude molecule/intra rigid2
 fix fxlange all langevin $t $t 1000.0 327843
+#fix fxbaro all press/berendsen iso 10.0 10.0 1000.0
+#fix membrane dummy planeforce 0.0 0.0 1.0
+#fix softpush rigid addforce 0.0 0.0 v_spush
+#fix hardpush real addforce 0.0 0.0 v_hpush
 fix fxstandard nonrigid nve
 #fix fxdummy dummy nve
 
 group arp3 id 1:404
 group arp2 id 405:778
-group arpC1 id 779:1132
 
 compute egroup1 actin group/group arp2
 compute egroup2 actin group/group arp3
-compute egroup3 actin group/group arp23
-compute egroup4 dl group/group ch
-compute egroup5 dl group/group actin
+compute egroup3 actin group/group rigid1
 
 thermo        1000
-thermo_style  custom step pe ke temp press c_egroup1 c_egroup2 c_egroup3 c_egroup4 c_egroup5
+thermo_style  custom step pe ke temp press c_egroup1 c_egroup2 c_egroup3
 thermo_modify flush yes
 dump          VMD1 all xtc 1000 xtc/out_$t.xtc
 restart       100000 restart.$t.tmp1 restart.$t.tmp2

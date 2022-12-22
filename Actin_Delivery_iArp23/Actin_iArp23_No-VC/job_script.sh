@@ -3,10 +3,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=28
 #SBATCH -t 48:00:00
-#SBATCH -J c-fix_6uhc
+#SBATCH -J arp23_filament
 #SBATCH -A TG-MCB180021 
-#SBATCH -o c-fix_6uhc.%j.%N.out
-#SBATCH -e c-fix_6uhc.%j.%N.err
+#SBATCH -o arp23_filament.%j.%N.out
+#SBATCH -e arp23_filament.%j.%N.err
 #SBATCH --export=ALL
 
 module purge
