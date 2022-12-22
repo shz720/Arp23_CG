@@ -1,0 +1,85 @@
+processors * * *
+units       real
+dimension   3
+boundary    p p p 
+atom_style  full
+
+variable d equal 0.1
+
+pair_style  hybrid/overlay lj/cut/coul/debye $d 0.0 lj/cut $d lj/cut $d table lookup 1000
+bond_style  harmonic
+dielectric  80.0
+
+variable t world 180 #190 200 210 220 240 260 280 300 320 340 380 420 460 500 540
+#variable t world 300
+
+read_data input.data
+#read_restart restart.$t.tmp2
+
+#fix walls all wall/harmonic xlo EDGE 80.0 5.0 20.0 xhi EDGE 80.0 5.0 20.0 ylo EDGE 80.0 5.0 20.0 yhi EDGE 80.0 5.0 20.0 zlo EDGE 80.0 5.0 20.0 zhi EDGE 80.0 5.0 20.0 
+
+
+bond_coeff  1 189 3.81
+
+pair_coeff * * lj/cut 1 0.0 0.0 0.0
+include KH_A_Coeffs.txt
+
+special_bonds fene
+
+neighbor  3.5 multi
+neigh_modify  every 10 delay 0
+
+timestep      10.0
+
+#variable hpush atom "(z/abs(z))*0.6*20/z^13"
+#variable spush atom "1/(1+exp(z))"
+
+#group dummy id 589:592
+#group real subtract all dummy
+group rigid1 id 1:1927
+group act1 id 1928:2302
+group act2 id 2303:2677
+group dl1 id 1967:1978
+group dl2 id 2342:2353
+group rigid2 subtract act1 dl1
+group rigid3 subtract act2 dl2
+group nonrigid subtract all rigid1 rigid2 rigid3 
+#include fixes.txt
+
+velocity all create $t 494211
+#velocity all create $t 494211
+fix fxrigid1 rigid1 rigid/nve molecule
+fix fxrigid2 rigid2 rigid/nve molecule
+fix fxrigid3 rigid3 rigid/nve molecule
+#neigh_modify exclude molecule/intra rigid
+neigh_modify exclude molecule/intra rigid1
+neigh_modify exclude molecule/intra rigid2
+neigh_modify exclude molecule/intra rigid3
+fix fxlange all langevin $t $t 1000.0 327843
+#fix fxbaro all press/berendsen iso 10.0 10.0 1000.0
+#fix membrane dummy planeforce 0.0 0.0 1.0
+#fix softpush rigid addforce 0.0 0.0 v_spush
+#fix hardpush real addforce 0.0 0.0 v_hpush
+fix fxstandard nonrigid nve
+#fix fxdummy dummy nve
+
+group arp2 id 1:394
+group arp3 id 395:812
+
+compute egroup1 act1 group/group arp2
+compute egroup2 act1 group/group arp3
+compute egroup3 act2 group/group arp2
+compute egroup4 act2 group/group arp3
+compute egroup5 act1 group/group rigid1
+compute egroup6 act2 group/group rigid1
+compute egroup7 act1 group/group act2
+
+thermo        1000
+thermo_style  custom step pe ke temp press c_egroup1 c_egroup2 c_egroup3 c_egroup4 c_egroup5 c_egroup6 c_egroup7
+thermo_modify flush yes
+dump          VMD1 all xtc 1000 xtc/out_$t.xtc
+restart       100000 restart.$t.tmp1 restart.$t.tmp2
+
+run           100000000
+#temper        500000000 1000 $t fxlange 0 18374
+write_data out_$t.data
