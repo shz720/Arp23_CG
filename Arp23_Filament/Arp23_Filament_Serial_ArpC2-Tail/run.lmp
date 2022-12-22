@@ -1,0 +1,107 @@
+processors * * *
+units       real
+dimension   3
+boundary    p p p
+atom_style  full
+
+variable d equal 0.1
+
+pair_style  hybrid/overlay lj/cut/coul/debye $d 0.0 lj/cut $d lj/cut $d table lookup 1000
+bond_style  harmonic
+dielectric  80.0
+
+#variable t world 300
+
+read_data input.data
+#read_restart restart.$t.tmp2
+
+bond_coeff  1 189 3.81
+
+pair_coeff * * lj/cut 1 0.0 0.0 0.0
+include KH_A_Coeffs.txt
+
+#pair_style lj/cut/coul/cut/soft 2.0 0.5 10.0 9.5
+#pair_style lj/cut/coul/cut/soft 2.0 0.5 10.0 9.5 9.5
+#pair_coeff * * 0.28 3.1 1.0
+#pair_coeff 1 1 0.28 3.1 0.5 10.0
+#pair_coeff 1 1 0.28 3.1 0.5 10.0 9.5
+
+variable t world 180 #190 200 210 220 240 260 280 300 320 340 380 420 480 540 600
+#variable t world 300
+
+special_bonds fene
+
+neighbor  3.5 multi
+neigh_modify  every 10 delay 0
+
+timestep      10.0
+
+#variable hpush atom "(z/abs(z))*0.6*20/z^13"
+#variable spush atom "1/(1+exp(z))"
+
+#group dummy id 589:592
+#group real subtract all dummy
+group arp23 id 1:1946
+group filament id 1946:4914
+group arp2dl id 40:53
+group arp3dl id 439:452
+group arpc2tail id 1466:1484
+group ii1 id 1982:1993
+group ii2 id 2353:2364
+group ii3 id 2724:2735
+group ii4 id 3095:3106
+group ii5 id 3466:3477
+group ii6 id 3837:3848
+group ii7 id 4208:4219
+group ii8 id 4579:4590
+group rigid1 subtract arp23 arp2dl arp3dl arpc2tail
+group rigid2 subtract filament ii1 ii2 ii3 ii4 ii5 ii6 ii7 ii8
+group nonrigid subtract all rigid1 rigid2
+#include fixes.txt
+
+#velocity all create $t 494211
+fix fxrigid1 rigid1 rigid/nve molecule
+#fix fxrigid2 rigid2 rigid/nve molecule
+#neigh_modify exclude molecule/intra rigid
+neigh_modify exclude molecule/intra rigid1
+neigh_modify exclude molecule/intra rigid2
+group flexible subtract all rigid2
+fix fxlange all langevin $t $t 1000.0 327843
+#fix fxbaro all press/berendsen iso 10.0 10.0 1000.0
+#fix membrane dummy planeforce 0.0 0.0 1.0
+#fix softpush rigid addforce 0.0 0.0 v_spush
+#fix hardpush real addforce 0.0 0.0 v_hpush
+fix fxstandard nonrigid nve
+#fix fxdummy dummy nve
+
+group arpc1 id 813:1184
+group arpc2 id 1185:1484
+group arpc3 id 1485:1662
+group arpc4 id 1663:1830
+group arpc5 id 1831:1946
+group arp2 id 1:394
+group arp3 id 395:812
+
+compute egroup1 arp23 group/group filament
+compute egroup2 arpc1 group/group filament
+compute egroup3 arpc2 group/group filament
+compute egroup4 arpc3 group/group filament
+compute egroup5 arpc4 group/group filament
+compute egroup6 arpc5 group/group filament
+compute egroup7 arp2 group/group filament
+compute egroup8 arp3 group/group filament
+
+velocity flexible create $t 494211
+#fix filament rigid2 setforce 0.0 0.0 0.0
+#velocity rigid2 set 0 0 0       
+#fix filament1 rigid2 momentum 0 linear 0 0 0 angular
+
+thermo        1000
+thermo_style  custom step pe ke temp press c_egroup1 c_egroup2 c_egroup3 c_egroup4 c_egroup5 c_egroup6 c_egroup7 c_egroup8
+thermo_modify flush yes
+dump          VMD1 all xtc 1000 xtc/out_$t.xtc
+restart       100000 restart.$t.tmp1 restart.$t.tmp2
+
+run           100000000
+#temper        500000000 1000 $t fxlange 0 18374
+write_data out_$t.data
